@@ -25,7 +25,7 @@ def Transform(LinkToFile):
     for out in outs:
         for detection in out:
             scores = detection[5:]
-            class_id = np.argmax(scores)
+            class_id = int(np.argmax(scores))
             confidence = scores[class_id]
             if confidence > 0.5:
                 #onject detected
@@ -51,9 +51,12 @@ def Transform(LinkToFile):
     for i in range(len(boxes)-1):
         temp = {}
         temp['box'] = boxes[i]
-        temp['confidece'] = confidence[i]
+        temp['confidece'] = confidences[i]
         temp['class'] = class_ids[i]
         Temp_Array.append(temp)
 
-    return json.dumps(Temp_Array)
+    print(Temp_Array)
+    Temp_Array = json.dumps(Temp_Array)
+
+    return Temp_Array
 

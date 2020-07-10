@@ -1,0 +1,15 @@
+version: '0'
+
+services:
+  # Start the Database
+  db:
+    image: Server:latest
+    volumes:
+      - db_data:/var/lib/Server
+    restart: always
+    ports:
+      - "80:80"
+
+volumes:
+  db_data: {}
+
