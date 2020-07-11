@@ -1,8 +1,8 @@
 import flask
 import os
-from flask import Flask, flash, request, redirect, url_for
+from flask import Flask, flash, request, redirect, url_for, send_file, Response
 from werkzeug.utils import secure_filename
-from DarknetFunction import Transform
+from DarknetFunction import Yolo1, DocumentDetection
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -20,7 +20,7 @@ def allowed_file(filename):
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/Yolo1', methods=['GET', 'POST'])
 def upload_file():
     TempName = ""
 
@@ -39,10 +39,32 @@ def upload_file():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             # return redirect(url_for('uploaded_file', filename=filename))
 
-    ReturnString = Transform(UPLOAD_FOLDER + TempName)
+    ReturnString = Yolo1(UPLOAD_FOLDER + TempName)
 
     return ReturnString
 
+@app.route('/DocumentDetection/', methods = ['GET', 'POST'])
+def secondUpload():
+    TempName = ""
+
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return "No file part"
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        if file.filename == '':
+            return "No selected file"
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            TempName = filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # return redirect(url_for('uploaded_file', filename=filename))
+
+    Answer = DocumentDetection(UPLOAD_FOLDER + TempName)
+    file = open("resultImage.jpg")
+    return send_file(file, mimetype='image/jpg')
 
 
 app.secret_key = 'super secret key'
