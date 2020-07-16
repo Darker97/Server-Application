@@ -135,7 +135,6 @@ def getBoxes(Path_image):
     boxes, confidences, indices, classes, image, class_ids  = Auswertung_Yolo(Path_image)
     
     array = []
-    print (indices)
     for i in indices:
         i = i[0]
         box = boxes[i]
@@ -147,7 +146,6 @@ def getBoxes(Path_image):
         label = str(classes[class_ids[i]])
 
         temp = {}
-        i = i[0]
         temp['class'] = label
         temp['box'] = [x,y,w,h]
         array.append(temp)
