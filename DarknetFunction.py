@@ -1,84 +1,167 @@
+
+import argparse
+import time
 import cv2
+import os
 import numpy as np
-import json
 
+Path_cfg  = "Data/yolov3_custom.cfg"
+Path_weight = "Data/yolov3.weights"
+Path_classes = "Data/class.names"
+confidence = 0.5
 
-# -------------------------------------
-# Yolo1
-net = cv2.dnn.readNet("Data/yolov3.weights", "Data/yolov3_custom.cfg")
+def Auswertung_Yolo(Path_image):
+    image = cv2.imread(Path_image)
 
-def Yolo1(LinkToFile):
-    layer_names = net.getLayerNames()
-    outputlayers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+    Width = image.shape[1]
+    Height = image.shape[0]
+    scale = 0.00392
 
-    #loading image
-    img = cv2.imread(LinkToFile)
-    img = cv2.resize(img,None,fx=0.4,fy=0.3)
-    height,width,channels = img.shape
+    # read class names from text file
+    classes = None
+    with open(Path_classes, 'r') as f:
+        classes = [line.strip() for line in f.readlines()]
 
+    # read pre-trained model and config file
+    net = cv2.dnn.readNet(Path_weight, Path_cfg)
 
-    blob = cv2.dnn.blobFromImage(img,0.00392,(416,416),(0,0,0),True,crop=False)
+    # create input blob 
+    blob = cv2.dnn.blobFromImage(image, scale, (416,416), (0,0,0), True, crop=False)
 
+    # set input blob for the network
     net.setInput(blob)
-    outs = net.forward(outputlayers)
+    outs = net.forward(get_output_layers(net))
 
-    class_ids=[]
-    confidences=[]
-    boxes=[]
+    # initialization
+    class_ids = []
+    confidences = []
+    boxes = []
+    conf_threshold = 0.5
+    nms_threshold = 0.4
+
+    # for each detetion from each output layer 
+    # get the confidence, class id, bounding box params
+    # and ignore weak detections (confidence < 0.5)
     for out in outs:
         for detection in out:
             scores = detection[5:]
-            class_id = int(np.argmax(scores))
+            class_id = np.argmax(scores)
             confidence = scores[class_id]
             if confidence > 0.5:
-                #onject detected
-                center_x= int(detection[0]*width)
-                center_y= int(detection[1]*height)
-                w = int(detection[2]*width)
-                h = int(detection[3]*height)
-            
-                #cv2.circle(img,(center_x,center_y),10,(0,255,0),2)
-                #rectangle co-ordinaters
-                x=int(center_x - w/2)
-                y=int(center_y - h/2)
-                #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-                
-                boxes.append([x,y,w,h]) #put all rectangle areas
-                confidences.append(float(confidence)) #how confidence was that object detected and show that percentage
-                class_ids.append(class_id) #name of the object tha was detected
+                center_x = int(detection[0] * Width)
+                center_y = int(detection[1] * Height)
+                w = int(detection[2] * Width)
+                h = int(detection[3] * Height)
+                x = center_x - w / 2
+                y = center_y - h / 2
+                class_ids.append(class_id)
+                confidences.append(float(confidence))
+                boxes.append([x, y, w, h])
 
-    indexes = cv2.dnn.NMSBoxes(boxes,confidences,0.4,0.6)
+    # apply non-max suppression
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
 
-    Temp_Array = []
+    return boxes, confidences, indices, classes, image, class_ids
 
-    for i in range(len(boxes)-1):
-        temp = {}
-        temp['box'] = boxes[i]
-        temp['confidece'] = confidences[i]
-        temp['class'] = class_ids[i]
-        Temp_Array.append(temp)
+def CutTable(image, indices, boxes, confidences, class_ids, classes):
+    for i in indices:
+        i = i[0]
+        box = boxes[i]
+        x = round(box[0])
+        y = round(box[1])
+        w = round(box[2])
+        h = round(box[3])
 
-    print(Temp_Array)
-    Temp_Array = json.dumps(Temp_Array)
+        newImage = image[y:y+h, x:x+w]
+        label = str(classes[class_ids[i]])
+        
+        if label == "table": 
+            return newImage
+    pass
 
-    return Temp_Array
+def Paint_Yolo(image, indices, boxes, confidences, class_ids, classes):
+    for i in indices:
+        i = i[0]
+        box = boxes[i]
+        x = box[0]
+        y = box[1]
+        w = box[2]
+        h = box[3]
+        
+        draw_bounding_box(image, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h),classes)
+        
+    # save output image to disk
+    return image
 
+# ------------------------------------------------------------------------------------
 
-# -------------------------------------
-# Document Detection
+def get_output_layers(net):  
+    layer_names = net.getLayerNames()
+    output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+    return output_layers
 
-def DocumentDetection(LinkToFile):
-    img = cv2.imread(LinkToFile)
+# function to draw bounding box on the detected object with class name
+def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h, classes):
+    # generate different colors for different classes 
+    COLORS = np.random.uniform(0, 255, size=(len(classes), 3))
+
+    label = str(classes[class_id])
+    color = COLORS[class_id]
+    cv2.rectangle(img, (x,y), (x_plus_w,y_plus_h), color, 2)
+    cv2.putText(img, label, (x-10,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+# ------------------------------------------------------------------------------------
+# Functions for the API
+
+def getPaintedImage(Path_image):
+    Path_image = FindeDocument(Path_image)
+
+    boxes, confidences, indices, classes, image, class_ids  = Auswertung_Yolo(Path_image)
+    image = Paint_Yolo(image, indices, boxes, confidences, class_ids, classes)
+    p = cv2.imwrite("result.jpg", image)
+    print(p)
+    return "result.jpg"
+
+def getTable(Path_image):
+    Path_image = FindeDocument(Path_image)
+
+    boxes, confidences, indices, classes, image, class_ids = Auswertung_Yolo(Path_image)
+    image = CutTable(image, indices, boxes, confidences, class_ids, classes)
+
+    try:
+        p = cv2.imwrite("table.jpg", image)
+    except Exception:
+        return 0
+    print(p)
+    return "table.jpg"
+
+def getBoxes(Path_image):
+    Path_image = FindeDocument(Path_image)
     
-    FindeDocument(img)
+    boxes, confidences, indices, classes, image, class_ids  = Auswertung_Yolo(Path_image)
+    
+    array = []
+    for i in indices:
+        i = i[0]
+        box = boxes[i]
+        x = round(box[0])
+        y = round(box[1])
+        w = round(box[2])
+        h = round(box[3])
 
-    Aufbereitung(img)
+        label = str(classes[class_ids[i]])
 
-    MachDokumentSchick(img)
+        temp = {}
+        temp['class'] = label
+        temp['box'] = [x,y,w,h]
+        array.append(temp)
+    
+    return array
 
-    return img
-
-def FindeDocument(image):
+# ------------------------------------------------------------------------------------
+# Functionen zum verbessern des Inputs
+def FindeDocument(image_path):
+    image = cv2.imread(image_path)
 
     img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -175,16 +258,6 @@ def FindeDocument(image):
     M = cv2.getPerspectiveTransform(sPoints, tPoints) 
     newImage = cv2.warpPerspective(image, M, (int(width), int(height)))
 
-    cv2.imwrite("resultImage.jpg", cv2.cvtColor(newImage, cv2.COLOR_BGR2RGB))
+    cv2.imwrite("Zwischenergebnis.jpg", cv2.cvtColor(newImage, cv2.COLOR_BGR2RGB))
     
-    return "resultImage.jpg"
-
-def MachDokumentSchick(img):
-
-
-    return img
-
-def Aufbereitung(img):
-    
-    
-    return img
+    return "Zwischenergebnis.jpg"
