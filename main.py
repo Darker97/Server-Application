@@ -2,7 +2,7 @@ import flask
 import os
 from flask import Flask, flash, request, redirect, url_for, send_file, Response
 from werkzeug.utils import secure_filename
-from DarknetFunction import Yolo1, DocumentDetection, YoloComplet
+from DarknetFunction import getPaintedImage, getTable, getBoxes
 import json
 
 app = flask.Flask(__name__)
@@ -40,7 +40,7 @@ def upload_file():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             # return redirect(url_for('uploaded_file', filename=filename))
 
-    ReturnString = json.dumps(Yolo1(UPLOAD_FOLDER + TempName))
+    ReturnString = json.dumps(getBoxes(UPLOAD_FOLDER + TempName))
 
     return ReturnString
 
@@ -63,7 +63,7 @@ def secondUpload():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             # return redirect(url_for('uploaded_file', filename=filename))
 
-    Answer = DocumentDetection(UPLOAD_FOLDER + TempName)
+    Answer = getPaintedImage(UPLOAD_FOLDER + TempName)
     file = open(Answer)
     return send_file(file, mimetype='image/jpg')
 
@@ -86,7 +86,7 @@ def thirdUpload():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             # return redirect(url_for('uploaded_file', filename=filename))
 
-    Answer = YoloComplet(UPLOAD_FOLDER + TempName)
+    Answer = getTable(UPLOAD_FOLDER + TempName)
     if Answer is "Nil":
         return "No table found"
 
