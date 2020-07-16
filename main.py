@@ -21,7 +21,7 @@ def allowed_file(filename):
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/yolo1/', methods=['GET', 'POST'])
+@app.route('/getBoxes/', methods=['GET', 'POST'])
 def upload_file():
     TempName = ""
 
@@ -44,7 +44,7 @@ def upload_file():
 
     return ReturnString
 
-@app.route('/DocumentDetection/', methods = ['GET', 'POST'])
+@app.route('/getPainted/', methods = ['GET', 'POST'])
 def secondUpload():
     TempName = ""
 
@@ -67,7 +67,7 @@ def secondUpload():
     file = open(Answer)
     return send_file(file, mimetype='image/jpg')
 
-@app.route('/komplett/', methods = ['GET', 'POST'])
+@app.route('/getTable/', methods = ['GET', 'POST'])
 def thirdUpload():
     TempName = ""
 
@@ -87,7 +87,8 @@ def thirdUpload():
             # return redirect(url_for('uploaded_file', filename=filename))
 
     Answer = getTable(UPLOAD_FOLDER + TempName)
-    if Answer is "Nil":
+    
+    if Answer is 0:
         return "No table found"
 
     file = open("result.jpg")

@@ -63,17 +63,20 @@ def Auswertung_Yolo(Path_image):
 
     return boxes, confidences, indices, classes, image, class_ids
 
-def CutTable(boxes, confidences, indices, classes, image):
+def CutTable(image, indices, boxes, confidences, class_ids, classes):
     for i in indices:
         i = i[0]
         box = boxes[i]
-        x = box[0]
-        y = box[1]
-        w = box[2]
-        h = box[3]
-        if i is 3:
-            image = image[y:y+h, x:x+w]
-            return image
+        x = round(box[0])
+        y = round(box[1])
+        w = round(box[2])
+        h = round(box[3])
+
+        newImage = image[y:y+h, x:x+w]
+        label = str(classes[class_ids[i]])
+        
+        if label == "table": 
+            return newImage
     pass
 
 def Paint_Yolo(image, indices, boxes, confidences, class_ids, classes):
@@ -113,26 +116,40 @@ def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h, class
 def getPaintedImage(Path_image):
     boxes, confidences, indices, classes, image, class_ids  = Auswertung_Yolo(Path_image)
     image = Paint_Yolo(image, indices, boxes, confidences, class_ids, classes)
-    cv2.imwrite("result.jpg", image)
+    p = cv2.imwrite("result.jpg", image)
+    print(p)
     return "result.jpg"
 
 def getTable(Path_image):
     boxes, confidences, indices, classes, image, class_ids = Auswertung_Yolo(Path_image)
-    image = CutTable(boxes, confidences, indices, classes, image)
+    image = CutTable(image, indices, boxes, confidences, class_ids, classes)
 
-    cv2.imwrite("table.jpg", image)
+    try:
+        p = cv2.imwrite("table.jpg", image)
+    except Exception:
+        return 0
+    print(p)
     return "table.jpg"
 
 def getBoxes(Path_image):
     boxes, confidences, indices, classes, image, class_ids  = Auswertung_Yolo(Path_image)
     
     array = []
-
+    print (indices)
     for i in indices:
+        i = i[0]
+        box = boxes[i]
+        x = round(box[0])
+        y = round(box[1])
+        w = round(box[2])
+        h = round(box[3])
+
+        label = str(classes[class_ids[i]])
+
         temp = {}
         i = i[0]
-        temp['class'] = class_ids[i]
-        temp['box'] = boxes[i]
+        temp['class'] = label
+        temp['box'] = [x,y,w,h]
         array.append(temp)
     
     return array
