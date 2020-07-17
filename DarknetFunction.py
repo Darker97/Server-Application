@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 Path_cfg  = "Data/yolov3_custom.cfg"
-Path_weight = "Data/yolov3.weights"
+Path_weight = "Data/YoloV3.weights"
 Path_classes = "Data/class.names"
 confidence = 0.5
 

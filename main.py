@@ -1,6 +1,6 @@
 import flask
 import os
-from flask import Flask, flash, request, redirect, url_for, send_file, Response
+from flask import Flask, flash, request, redirect, url_for, send_file, Response, send_from_directory
 from werkzeug.utils import secure_filename
 from DarknetFunction import getPaintedImage, getTable, getBoxes
 import json
@@ -28,11 +28,13 @@ def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
+            print("No file part")
             return "No file part"
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
         if file.filename == '':
+            print("No selected file")
             return "No selected file"
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -51,11 +53,13 @@ def secondUpload():
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
+            print("No file part")
             return "No file part"
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
         if file.filename == '':
+            print("No selected file")
             return "No selected file"
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
@@ -64,8 +68,7 @@ def secondUpload():
             # return redirect(url_for('uploaded_file', filename=filename))
 
     Answer = getPaintedImage(UPLOAD_FOLDER + TempName)
-    file = open(Answer)
-    return send_file(file, mimetype='image/jpg')
+    return send_file(Answer, mimetype='image/jpg')
 
 @app.route('/getTable/', methods = ['GET', 'POST'])
 def thirdUpload():
@@ -89,13 +92,13 @@ def thirdUpload():
     Answer = getTable(UPLOAD_FOLDER + TempName)
     
     if Answer is 0:
+        print("No table found")
         return "No table found"
 
-    file = open("result.jpg")
-    return send_file(file, mimetype='image/jpg')
+    return send_file(Answer, mimetype='image/jpg')
 
 app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'
 
 app.debug = True
-app.run()
+app.run(host= '0.0.0.0')
