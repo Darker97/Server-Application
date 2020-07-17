@@ -1,1 +1,5 @@
 Data/yolov3.weights
+
+.DS_Store
+
+__pycache__/
